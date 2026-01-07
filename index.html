@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="de">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Zirkel-Timer</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div class="wrap">
+        <!-- Header -->
+        <header class="card header">
+            <div class="brand">
+                <div class="logo" title="Logo">
+                    <img src="logo.png" alt="Logo"
+                        onerror="this.style.display='none'; this.parentElement.classList.add('logoFallback'); this.parentElement.textContent='Logo';" />
+                </div>
+                <div class="title">
+                    <div class="titleMain">Zirkel-Timer</div>
+                    <div class="titleSub">Training · Wechsel · Pause — klar, groß, hörbar</div>
+                </div>
+            </div>
+
+            <div class="hud">
+                <div class="hudItem">
+                    <div class="hudLabel">Durchgang</div>
+                    <div class="hudValue" id="roundHud">1 / 3</div>
+                </div>
+                <div class="hudItem">
+                    <div class="hudLabel">Station</div>
+                    <div class="hudValue hudValueBig" id="stationHud">1 / 8</div>
+                </div>
+                <div class="hudItem">
+                    <div class="hudLabel">Status</div>
+                    <div class="hudValue" id="statusHud">Bereit</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <main class="card main" id="phasePanel">
+            <!-- Left: Big timer -->
+            <section class="timerPanel">
+                <div class="phaseTag" id="phaseTag">
+                    <span class="dot" aria-hidden="true"></span>
+                    <span id="phaseLabel">Bereit</span>
+                </div>
+
+                <div class="bigTime" id="time">01:00</div>
+
+                <div class="phaseHint" id="detail">
+                    Drücke <strong>Start</strong>. Audio startet nach Nutzerinteraktion.
+                </div>
+
+                <div class="controls">
+                    <button class="primary" id="startBtn">Start</button>
+                    <button class="warn" id="pauseBtn" disabled>Pause</button>
+                    <button class="danger" id="resetBtn">Reset</button>
+                    <button class="ghost" id="fullscreenBtn" title="Vollbild">Vollbild</button>
+                </div>
+
+                <div class="hint">
+                    Tipp: Für Beamer/Halle ist Vollbild sinnvoll. Einstellungen werden während des Laufens gesperrt.
+                </div>
+            </section>
+
+            <!-- Right: Settings -->
+            <aside class="settings" id="settingsPanel">
+                <div class="grid">
+                    <div class="field">
+                        <label for="stationsTotal">Stationen</label>
+                        <input id="stationsTotal" type="number" min="2" max="20" step="1" value="8" />
+                    </div>
+
+                    <div class="field">
+                        <label for="roundsTotal">Durchgänge</label>
+                        <input id="roundsTotal" type="number" min="1" max="10" step="1" value="3" />
+                    </div>
+
+                    <div class="field">
+                        <label for="trainSec">Training (Sek.)</label>
+                        <input id="trainSec" type="number" min="10" max="600" step="5" value="60" />
+                    </div>
+
+                    <div class="field">
+                        <label for="swapSec">Wechsel (Sek.)</label>
+                        <input id="swapSec" type="number" min="5" max="180" step="5" value="20" />
+                    </div>
+
+                    <div class="field">
+                        <label for="restSec">Pause (Sek.)</label>
+                        <input id="restSec" type="number" min="0" max="600" step="5" value="60" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <span>Letzte 5 Sekunden: Signalton</span>
+                    <input id="last5Beeps" type="checkbox" checked />
+                </div>
+
+                <div class="row">
+                    <span>Phasenwechsel: Signalton</span>
+                    <input id="phaseBeeps" type="checkbox" checked />
+                </div>
+
+                <div class="row">
+                    <span>„Weiter geht’s“-Ton (Start Training nach Wechsel)</span>
+                    <input id="goBeeps" type="checkbox" checked />
+                </div>
+
+                <div class="row">
+                    <span>Kurze Sprachansagen (Training/Wechsel/Pause)</span>
+                    <input id="voice" type="checkbox" />
+                </div>
+
+                <div class="note">
+                    Empfehlung: Für Gruppenbetrieb „Sprachansagen“ meist auslassen, Signaltöne reichen.
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
