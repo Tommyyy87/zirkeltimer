@@ -13,6 +13,9 @@
     const resetBtn = document.getElementById("resetBtn");
     const fullscreenBtn = document.getElementById("fullscreenBtn");
 
+    // Optionaler Button (nur wenn im HTML vorhanden)
+    const audioBtn = document.getElementById("audioBtn");
+
     // Inputs
     const stationsTotalEl = document.getElementById("stationsTotal");
     const roundsTotalEl = document.getElementById("roundsTotal");
@@ -32,9 +35,11 @@
 
     // ----- Audio -----
     let audioCtx = null;
+
     function ensureAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
+
     function beep(freq = 440, duration = 0.09, gain = 0.07) {
         if (!audioCtx) return;
         const o = audioCtx.createOscillator();
@@ -47,6 +52,7 @@
         o.start();
         o.stop(audioCtx.currentTime + duration);
     }
+
     function beepPattern(pattern) {
         // pattern: Array<{f,d,g,t}>
         // t = delay ms from now
@@ -69,6 +75,28 @@
             o.start(startAt);
             o.stop(stopAt);
         });
+    }
+
+    async function unlockAudio(showStatus = true) {
+        // iOS/Safari: Audio muss durch Nutzerinteraktion "freigeschaltet" werden
+        try {
+            ensureAudio();
+            if (audioCtx.state === "suspended") {
+                await audioCtx.resume();
+            }
+
+            // kurzer Testton – sorgt bei iOS oft dafür, dass Audio wirklich aktiv ist
+            beep(880, 0.08, 0.12);
+
+            if (showStatus) {
+                // Nicht den Laufstatus überschreiben, wenn gerade läuft
+                if (!running) statusHud.textContent = "Audio OK";
+            }
+            return true;
+        } catch (e) {
+            if (showStatus) statusHud.textContent = "Audio blockiert";
+            return false;
+        }
     }
 
     function speak(text) {
@@ -292,11 +320,8 @@
         remaining--;
     }
 
-    function startTimer() {
+    async function startTimer() {
         if (running) return;
-
-        ensureAudio();
-        if (audioCtx.state === "suspended") audioCtx.resume();
 
         running = true;
         startBtn.disabled = true;
@@ -305,6 +330,9 @@
 
         // >>> Layout: Settings weg, Timer größer
         setRunningLayout(true);
+
+        // >>> Audio unlock direkt im Start-Click (iOS)
+        await unlockAudio(false);
 
         const cfg = readConfig();
 
@@ -375,7 +403,6 @@
                 if (phase === "training") remaining = cfg.TRAIN;
                 if (phase === "swap") remaining = cfg.SWAP;
                 if (phase === "rest") remaining = cfg.REST;
-                // station clamp if stations reduced
                 if (station > cfg.STATIONS) station = cfg.STATIONS;
                 updateHud();
                 tickUI();
@@ -384,10 +411,15 @@
     });
 
     // Buttons
-    startBtn.addEventListener("click", startTimer);
+    startBtn.addEventListener("click", () => startTimer());
     pauseBtn.addEventListener("click", stopTimer);
     resetBtn.addEventListener("click", resetAll);
     fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+    // Optional: Audio-Button, wenn vorhanden
+    if (audioBtn) {
+        audioBtn.addEventListener("click", () => unlockAudio(true));
+    }
 
     // Init
     readConfig();
