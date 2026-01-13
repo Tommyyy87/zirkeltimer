@@ -89,7 +89,6 @@
             beep(880, 0.08, 0.12);
 
             if (showStatus) {
-                // Nicht den Laufstatus überschreiben, wenn gerade läuft
                 if (!running) statusHud.textContent = "Audio OK";
             }
             return true;
@@ -120,6 +119,9 @@
     let round = 1;
     let station = 1; // 1..stationsTotal
     let remaining = 60;
+
+    // Guard gegen doppelte Beeps in derselben Sekunde (iOS/Interval-Jitter)
+    let last5FiredAt = null;
 
     function clampInt(v, min, max) {
         const n = Math.max(min, Math.min(max, parseInt(v, 10) || min));
@@ -223,7 +225,6 @@
         if (!goBeepsEl.checked) return;
         if (prevPhase !== "swap") return; // gezielt nach Wechsel
 
-        // deutlich anderer Ton: kurzer Doppelton (hoch -> höher)
         beepPattern([
             { f: 880, d: 0.09, g: 0.12, t: 0 },
             { f: 1320, d: 0.09, g: 0.12, t: 140 },
@@ -234,12 +235,20 @@
         if (!last5BeepsEl.checked) return;
         ensureAudio();
         if (audioCtx.state === "suspended") audioCtx.resume();
-        beep(900, 0.09, 0.12);
+
+        // Schutz gegen doppelte Auslösung innerhalb derselben Sekunde
+        if (last5FiredAt === remaining) return;
+        last5FiredAt = remaining;
+
+        // Markanter Doppel-Beep (iPhone/Halle besser hörbar)
+        beepPattern([
+            { f: 1040, d: 0.07, g: 0.14, t: 0 },
+            { f: 1040, d: 0.07, g: 0.14, t: 110 },
+        ]);
     }
 
     function nextPhase() {
         const cfg = readConfig();
-
         prevPhase = phase;
 
         if (phase === "training") {
@@ -251,21 +260,19 @@
         }
 
         if (phase === "swap") {
-            // Nächste Station
             station++;
             if (station <= cfg.STATIONS) {
                 phase = "training";
                 remaining = cfg.TRAIN;
                 setPhaseUI();
                 phaseStartCue();
-                goCueIfNeeded(); // <<< zusätzlicher „Weiter geht’s“-Ton
+                goCueIfNeeded();
                 return;
             }
 
-            // Stationsrunde fertig -> Pause
             phase = "rest";
             remaining = cfg.REST;
-            station = cfg.STATIONS; // Anzeige bleibt „letzte Station“, bis Pause endet
+            station = cfg.STATIONS;
             setPhaseUI();
             if (cfg.REST > 0) phaseStartCue();
             if (voiceEl.checked) speak(`Durchgang ${round} beendet.`);
@@ -278,7 +285,6 @@
                 finish();
                 return;
             }
-            // Nächster Durchgang
             station = 1;
             phase = "training";
             remaining = cfg.TRAIN;
@@ -298,25 +304,32 @@
 
         ensureAudio();
         if (audioCtx.state === "suspended") audioCtx.resume();
-        // Abschluss-Signal (klar)
+
         beepPattern([
             { f: 740, d: 0.12, g: 0.11, t: 0 },
             { f: 740, d: 0.12, g: 0.11, t: 170 },
         ]);
+
         speak("Workout fertig.");
     }
 
     function runTick() {
         if (!running) return;
 
+        // Countdown-Ton exakt bei 5..1 Sekunden
         if (remaining <= 5 && remaining >= 1) last5Cue();
+
         tickUI();
 
         if (remaining === 0) {
+            // Guard resetten, damit nächste Phase wieder sauber zählt
+            last5FiredAt = null;
+
             nextPhase();
             tickUI();
             return;
         }
+
         remaining--;
     }
 
@@ -328,10 +341,9 @@
         pauseBtn.disabled = false;
         lockSettings(true);
 
-        // >>> Layout: Settings weg, Timer größer
         setRunningLayout(true);
 
-        // >>> Audio unlock direkt im Start-Click (iOS)
+        // iOS: Audio unlock direkt im Start-Click
         await unlockAudio(false);
 
         const cfg = readConfig();
@@ -357,7 +369,6 @@
         pauseBtn.disabled = true;
         lockSettings(false);
 
-        // >>> Layout zurück (Settings wieder sichtbar)
         setRunningLayout(false);
 
         if (timerId) {
@@ -376,13 +387,14 @@
         station = 1;
         remaining = cfg.TRAIN;
 
+        last5FiredAt = null;
+
         statusHud.textContent = "Bereit";
         setPhaseUI();
         phaseLabelEl.textContent = "Bereit";
         detailEl.innerHTML = `Drücke <strong>Start</strong>.`;
         tickUI();
 
-        // >>> sicherstellen, dass Layout im Reset-Zustand normal ist
         setRunningLayout(false);
     }
 
